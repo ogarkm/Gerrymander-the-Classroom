@@ -9,7 +9,7 @@ toggle.addEventListener("change", (e) => {
   localStorage.setItem("theme", e.target.checked ? "dark-mode" : "light-mode");
 });
 
-/* --- CLIENT ID LOGIC (Persistence) --- */
+/* --- CLIENT ID LOGIC --- */
 function getOrCreateClientId() {
     let id = localStorage.getItem("gerry_client_id");
     if (!id) {
@@ -40,12 +40,10 @@ const STATE = {
   takenSeats: []
 };
 
-// CSS Root for dynamic colors
 const root = document.documentElement;
 
 ws.onopen = () => {
     console.log("Connected to Game Server");
-    // Identify ourselves immediately to handle reconnection
     ws.send(JSON.stringify({ type: "identify", clientId: CLIENT_ID }));
 };
 
@@ -53,24 +51,20 @@ ws.onmessage = (event) => {
     const msg = JSON.parse(event.data);
 
     if (msg.type === "restore_session") {
-        // Handle Reconnection
         STATE.seatId = msg.seatId;
         document.getElementById("user-badge").innerText = msg.name;
         alerUser(`Welcome back, ${msg.name}`);
         
-        // Sync Config
         if(msg.round_info) applyRoundConfig(msg.round_info);
         
-        // Restore State based on Phase
         if (msg.phase === "GAME" && msg.map_data) {
              startGame(msg.map_data);
         } else if (msg.phase === "VOTE") {
              showScreen("screen-vote");
         } else if (msg.phase === "LOGIN") {
-             initLogin(); // Redraws grid with 'ME' indicator
+             initLogin();
         }
     }
-
     else if (msg.type === "login_success") {
         STATE.seatId = msg.seatId;
         document.getElementById("user-badge").innerText = msg.name;
@@ -82,7 +76,10 @@ ws.onmessage = (event) => {
         }
         showWaiting("Seat Secured. Waiting for teacher...");
     }
-    
+    else if (msg.type === "game_reset") {
+        alert("The game has been reset by the admin.");
+        window.location.reload();
+    }
     else if (msg.type === "round_setup") {
         applyRoundConfig(msg.config);
     }
@@ -106,10 +103,8 @@ function applyRoundConfig(config) {
     root.style.setProperty('--party-b-color', config.colors[1]);
 
     document.getElementById("vote-question").innerText = config.question;
-    
     document.getElementById("name-party-a").innerText = config.options[0];
     document.getElementById("icon-party-a").className = `vote-icon ${config.icons[0]}`;
-    
     document.getElementById("name-party-b").innerText = config.options[1];
     document.getElementById("icon-party-b").className = `vote-icon ${config.icons[1]}`;
     
@@ -217,7 +212,6 @@ function renderLoginGrid() {
                 alerUser("Seat is already occupied.");
                 return;
             }
-            // Send Client ID with claim
             ws.send(JSON.stringify({ type: "claim_seat", seatId: i, clientId: CLIENT_ID }));
         };
         grid.appendChild(s);
@@ -302,11 +296,10 @@ function renderGameGrid() {
     const s = document.createElement("div");
     s.className = "seat";
     s.dataset.id = i;
-
     s.classList.add(data.partyIndex === 0 ? "party-a" : "party-b");
 
     const icon = document.createElement("i");
-    icon.className = `${STATE.roundConfig.icons[data.partyIndex]} game-icon-white`;
+    icon.className = STATE.roundConfig.icons[data.partyIndex];
     s.appendChild(icon);
 
     s.onmousedown = (e) => startDrag(i);
@@ -318,7 +311,6 @@ function renderGameGrid() {
       if (d) {
         s.classList.add("district-locked");
         s.classList.add(d.winnerIndex === 0 ? "winner-a" : "winner-b");
-        s.classList.add(data.partyIndex === 0 ? "voted-a" : "voted-b");
       }
     }
     container.appendChild(s);
@@ -395,11 +387,6 @@ function updateScore() {
   const btn = document.getElementById("finish-btn");
   if (count === 6) btn.style.display = "block";
   else btn.style.display = "none";
-}
-function toggleOriginalView(show) {
-  const seats = document.querySelectorAll(".seat");
-  if (show) seats.forEach((seat) => seat.classList.add("original-district"));
-  else seats.forEach((seat) => seat.classList.remove("original-district"));
 }
 
 function startTimer() {

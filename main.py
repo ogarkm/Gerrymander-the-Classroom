@@ -276,6 +276,18 @@ class GameManager:
         await self.broadcast_to_players(msg)
         await self.broadcast_admin_update()
 
+    async def handle_reset_game(self):
+        """Resets the game state to its initial configuration."""
+        self.seats = {}
+        self.game_phase = "LOGIN"
+        self.current_round_id = "consoles"
+        self.vote_counts = [0, 0]
+        self.global_map = []
+
+        # Send Reset Signal to everyone
+        await self.broadcast_to_players({"type": "game_reset"})
+        await self.broadcast_admin_update()
+
 
 manager = GameManager()
 
@@ -317,19 +329,6 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-
-    async def handle_reset_game(self):
-        """Resets the game state to its initial configuration."""
-        self.active_connections = []
-        self.seats = {}
-        self.game_phase = "LOGIN"
-        self.current_round_id = "consoles"  # Reset to default round
-        self.vote_counts = [0, 0]
-        self.global_map = []
-
-        # Notify admin and players about the reset
-        await self.broadcast_admin_update()
-        await self.broadcast_to_players({"type": "game_reset", "message": "The game has been reset."})
 
 @app.websocket("/ws/admin")
 async def websocket_admin(websocket: WebSocket):

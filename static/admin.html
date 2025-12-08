@@ -7,13 +7,74 @@
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="/static/styles.css">
-    <link rel="icon" type="image/png" href="/logo" />
+    <style>
+        /* Modal Styles */
+        .modal {
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; top: 0; width: 100%; height: 100%; 
+            background-color: rgba(0,0,0,0.7); 
+            backdrop-filter: blur(5px);
+            justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background-color: var(--container-bg);
+            padding: 30px;
+            border-radius: 12px;
+            width: 350px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            color: var(--text-color);
+        }
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .close-modal {
+            color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;
+            margin-top: -15px; margin-right: -10px;
+        }
+        .close-modal:hover { color: var(--accent-color); }
+        .qr-wrapper { margin: 20px auto; padding: 10px; background: white; border-radius: 8px; width: fit-content; }
+        .share-link {
+            background: var(--neutral-bg); padding: 10px; border-radius: 6px;
+            word-break: break-all; margin-top: 15px; font-family: monospace;
+            border: 1px solid var(--border-color);
+        }
+        .header-btn {
+            background: var(--accent-color); color: white; border: none; padding: 8px 16px; 
+            border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.9rem;
+            display: flex; align-items: center; gap: 8px; transition: 0.2s;
+        }
+        .header-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    </style>
 </head>
 <body class="admin-view">
 
+<!-- SHARE MODAL -->
+<div id="shareModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeShareModal()">&times;</span>
+        <h2 style="margin-top:0; color:var(--accent-color)">Join the Game</h2>
+        <p>Scan to join:</p>
+        <div class="qr-wrapper">
+            <img id="qr-code-img" src="" alt="QR Code" width="200" height="200">
+        </div>
+        <div class="share-link" id="share-link-text"></div>
+    </div>
+</div>
+
 <div class="game-container admin-container">
     <div class="game-header">
-        <h3><i class="fa-solid fa-gamepad"></i> COMMAND CENTER</h3>
+        <div style="display:flex; align-items:center; gap:15px;">
+            <h3><i class="fa-solid fa-gamepad"></i> COMMAND CENTER</h3>
+            <button class="header-btn" onclick="openShareModal()">
+                <i class="fa-solid fa-share-nodes"></i> Share Link
+            </button>
+        </div>
         <div id="connection-status" style="color: var(--desk-open); font-weight: bold;">
             <i class="fa-solid fa-wifi"></i> Online
         </div>
@@ -78,11 +139,11 @@
                 </div>
 
                 <!-- Reset Button -->
-                <div class="ctrl-group">
-                    <h3>Server Control</h3>
-                    <div class="btn-grid">
-                        <button class="admin-btn" id="btn-reset" onclick="resetGame()">
-                            <i class="fa-solid fa-power-off fa-lg"></i> RESET
+                <div class="ctrl-group" style="flex: 0 0 100px;">
+                    <h3>System</h3>
+                    <div class="btn-grid" style="grid-template-columns: 1fr;">
+                        <button class="admin-btn" id="btn-reset" onclick="resetGame()" style="background: rgba(231, 76, 60, 0.1); border-color: var(--desk-taken);">
+                            <i class="fa-solid fa-power-off fa-lg" style="color: var(--desk-taken)"></i> <span style="color:var(--desk-taken)">RESET</span>
                         </button>
                     </div>
                 </div>
@@ -106,11 +167,23 @@
 </div>
 
 <script>
-    const ws = new WebSocket(`ws://${window.location.host}/ws/admin`);
+    // SECURE PROTOCOL HANDLING
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws/admin`);
+    
     const TOTAL_SEATS = 30;
     const root = document.documentElement;
 
-    ws.onopen = () => console.log("Admin Connected");
+    ws.onopen = () => {
+        console.log("Admin Connected");
+        document.getElementById("connection-status").innerHTML = '<i class="fa-solid fa-wifi"></i> Online';
+        document.getElementById("connection-status").style.color = 'var(--desk-open)';
+    };
+
+    ws.onclose = () => {
+        document.getElementById("connection-status").innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Offline';
+        document.getElementById("connection-status").style.color = 'var(--desk-taken)';
+    };
     
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
@@ -126,7 +199,41 @@
     function changeRound(roundId) {
         if(confirm("Changing the round will reset current votes. Continue?")) {
             ws.send(JSON.stringify({ type: "set_round", round_id: roundId }));
-        } else {
+        }
+    }
+
+    function resetGame() {
+        if(confirm("⚠ DANGER: This will KICK ALL PLAYERS and RESET scores. Continue?")) {
+            ws.send(JSON.stringify({ type: "reset_game" }));
+        }
+    }
+
+    // --- SHARE FUNCTIONALITY ---
+    function openShareModal() {
+        const modal = document.getElementById("shareModal");
+        const linkText = document.getElementById("share-link-text");
+        const img = document.getElementById("qr-code-img");
+        
+        // Use the origin (protocol + host)
+        const joinLink = window.location.origin;
+        
+        linkText.innerText = joinLink;
+        
+        // Use QR Server API
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(joinLink)}`;
+        img.src = qrUrl;
+        
+        modal.style.display = "flex";
+    }
+
+    function closeShareModal() {
+        document.getElementById("shareModal").style.display = "none";
+    }
+
+    // Close modal on outside click
+    window.onclick = function(event) {
+        if (event.target == document.getElementById("shareModal")) {
+            closeShareModal();
         }
     }
 
@@ -164,7 +271,6 @@
             const row = document.createElement("div");
             row.className = "lb-row"; 
             
-            // Highlight offline players
             if (!p.online) row.style.opacity = "0.5";
 
             let borderColor = 'transparent';
@@ -197,7 +303,6 @@
             const s = document.createElement("div");
             s.className = "seat seat-admin"; 
             
-            // Layout margins specific to the 6-col grid layout
             if((i % 6) === 1 || (i % 6) === 3) s.style.marginRight = "20px";
             if(i >= 6 && i < 12) s.style.marginBottom = "20px";
             if(i >= 18 && i < 24) s.style.marginBottom = "20px";
@@ -206,7 +311,6 @@
                 s.classList.add("taken");
                 s.innerText = seatMap[i].name.replace("Desk #", "");
                 
-                // Show offline status on seat
                 if(!seatMap[i].online) {
                     s.style.opacity = "0.4";
                     s.style.border = "1px solid red";
@@ -228,15 +332,7 @@
             }
             grid.appendChild(s);
         }
-        }
-    
-        function resetGame() {
-            if(confirm("Are you sure you want to reset the game server? This will clear all player data and game state.")) {
-                ws.send(JSON.stringify({ type: "reset_game" }));
-                console.log("Sent reset_game command.");
-            }
-        }
-    
-    </script>
-    </body>
-    </html>
+    }
+</script>
+</body>
+</html>
