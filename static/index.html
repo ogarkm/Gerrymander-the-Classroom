@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gerrymander The Classroom</title>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/styles.css"/>
+    <link rel="stylesheet" href="/static/bb8.css"/>
+    <link rel="icon" type="image/png" href="/logo" />
+  </head>
+  <body>
+    <div class="game-container">
+      <div class="game-header">
+        <h3>Gerrymander the Classroom</h3>
+        <div class="header-controls">
+          <span id="user-badge">Guest</span>
+          <div class="theme-switch-wrapper">
+            <label class="bb8-toggle">
+              <input class="bb8-toggle__checkbox" type="checkbox" id="theme-toggle"/>
+              <div class="bb8-toggle__container">
+                <div class="bb8-toggle__scenery">
+                  <div class="bb8-toggle__star"></div>
+                  <div class="bb8-toggle__star"></div>
+                  <div class="bb8-toggle__star"></div>
+                  <div class="bb8-toggle__star"></div>
+                  <div class="bb8-toggle__star"></div>
+                  <div class="bb8-toggle__star"></div>
+                  <div class="bb8-toggle__star"></div>
+                  <div class="tatto-1"></div>
+                  <div class="tatto-2"></div>
+                  <div class="gomrassen"></div>
+                  <div class="hermes"></div>
+                  <div class="chenini"></div>
+                  <div class="bb8-toggle__cloud"></div>
+                  <div class="bb8-toggle__cloud"></div>
+                  <div class="bb8-toggle__cloud"></div>
+                </div>
+                <div class="bb8">
+                  <div class="bb8__head-container">
+                    <div class="bb8__antenna"></div>
+                    <div class="bb8__antenna"></div>
+                    <div class="bb8__head"></div>
+                  </div>
+                  <div class="bb8__body"></div>
+                </div>
+                <div class="artificial__hidden">
+                  <div class="bb8__shadow"></div>
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="game-content">
+        <div id="screen-login" class="screen active">
+          <h2>Choose Your Desk</h2>
+          <p>Click a green seat to verify attendance.</p>
+          <div id="login-grid" class="classroom-grid"></div>
+        </div>
+
+        <div id="screen-vote" class="screen">
+          <h2>Cast Your Vote</h2>
+          <p id="vote-question">Which option is better?</p>
+          <div class="vote-row">
+            <div id="btn-party-a" class="vote-card party-a" onclick="castVote(0)">
+              <i id="icon-party-a" class="vote-icon"></i>
+              <span id="name-party-a">Option A</span>
+            </div>
+            <div id="btn-party-b" class="vote-card party-b" onclick="castVote(1)">
+              <i id="icon-party-b" class="vote-icon"></i>
+              <span id="name-party-b">Option B</span>
+            </div>
+          </div>
+          <p id="vote-status"></p>
+        </div>
+
+        <div id="screen-game" class="screen">
+          <div class="game-stats">
+            <div>
+              <strong>Goal:</strong> Secure Districts for
+              <span id="my-party-display"></span>
+            </div>
+            <div id="game-timer">01:00</div>
+          </div>
+
+          <div class="game-instructions">
+            Drag across <strong>5 seats</strong> to form a district.<br />
+            (Total 6 Districts needed)
+          </div>
+
+          <div id="game-grid" class="classroom-grid"></div>
+
+          <div class="game-buttons">
+            <button
+              class="btn btn-outline"
+              onmousedown="toggleOriginalView(true)"
+              onmouseup="toggleOriginalView(false)"
+              ontouchstart="toggleOriginalView(true)"
+              ontouchend="toggleOriginalView(false)"
+            >
+              Hold to View Fair Map
+            </button>
+            <button id="finish-btn" class="btn" onclick="endGame()">
+              Finish
+            </button>
+          </div>
+
+          <div class="game-score">
+            Districts Formed: <span id="districts-count">0</span> / 6
+            <br />
+            <span>
+              My Wins: <span id="my-wins">0</span> (Original Fair Map:
+              <span id="orig-wins">0</span>)
+            </span>
+          </div>
+        </div>
+
+        <div id="screen-results" class="screen">
+          <h2>Round Complete</h2>
+          <p>Efficiency Gain</p>
+          <h1 id="score-percent">+0%</h1>
+          <div class="lb-container" id="lb-list"></div>
+          <p>Waiting for admin...</p>
+        </div>
+      </div>
+      
+      <div class="pagination-controls" style="display:none"></div>
+    </div>
+    <div id="notification-container"></div>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

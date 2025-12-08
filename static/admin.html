@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Command Center</title>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="icon" type="image/png" href="/logo" />
+</head>
+<body class="admin-view">
+
+<div class="game-container admin-container">
+    <div class="game-header">
+        <h3><i class="fa-solid fa-gamepad"></i> COMMAND CENTER</h3>
+        <div id="connection-status" style="color: var(--desk-open); font-weight: bold;">
+            <i class="fa-solid fa-wifi"></i> Online
+        </div>
+    </div>
+
+    <div class="dashboard-content">
+        <!-- LEADERBOARD CARD -->
+        <div class="dash-card area-leaderboard">
+            <h3>Live Rankings (Cumulative) <i class="fa-solid fa-trophy"></i></h3>
+            <div id="admin-leaderboard"></div>
+        </div>
+
+        <!-- MAP CARD -->
+        <div class="dash-card area-visual">
+            <div class="admin-grid-container">
+                <div id="admin-grid" class="classroom-grid"></div>
+            </div>
+        </div>
+
+        <!-- CONTROLS CARD -->
+        <div class="dash-card area-controls">
+            <div class="controls-wrapper">
+                
+                <!-- Game Config -->
+                <div class="ctrl-group" style="flex: 0 0 250px;">
+                    <h3>Game Configuration</h3>
+                    <select id="round-selector" class="round-select" onchange="changeRound(this.value)">
+                        {% for key, val in rounds.items() %}
+                        <option value="{{key}}">{{val.question}}</option>
+                        {% endfor %}
+                    </select>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: auto;">
+                        <div class="stat-box">
+                            <span class="stat-label">PLAYERS</span>
+                            <span class="stat-num" id="stat-players">0</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-label">TOTAL VOTES</span>
+                            <span class="stat-num" id="total-votes">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phase Buttons -->
+                <div class="ctrl-group">
+                    <h3>Phase Control</h3>
+                    <div class="btn-grid">
+                        <button class="admin-btn" id="btn-login" onclick="setPhase('LOGIN')">
+                            <i class="fa-solid fa-door-open fa-lg"></i> LOGIN
+                        </button>
+                        <button class="admin-btn" id="btn-vote" onclick="setPhase('VOTE')">
+                            <i class="fa-solid fa-check-to-slot fa-lg"></i> VOTE
+                        </button>
+                        <button class="admin-btn" id="btn-game" onclick="setPhase('GAME')">
+                            <i class="fa-solid fa-chess-board fa-lg"></i> GAME
+                        </button>
+                        <button class="admin-btn" id="btn-results" onclick="setPhase('RESULTS')">
+                            <i class="fa-solid fa-chart-simple fa-lg"></i> RESULTS
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Reset Button -->
+                <div class="ctrl-group">
+                    <h3>Server Control</h3>
+                    <div class="btn-grid">
+                        <button class="admin-btn" id="btn-reset" onclick="resetGame()">
+                            <i class="fa-solid fa-power-off fa-lg"></i> RESET
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Live Votes -->
+                <div class="ctrl-group" style="flex: 0 0 220px;">
+                    <h3>Live Polling</h3>
+                    <div class="stat-box" style="border-left: 4px solid var(--party-a-color); margin-bottom: 10px;">
+                        <span class="stat-label" id="label-a">Option A</span>
+                        <span class="stat-num col-a" id="stat-a">0</span>
+                    </div>
+                    <div class="stat-box" style="border-left: 4px solid var(--party-b-color);">
+                        <span class="stat-label" id="label-b">Option B</span>
+                        <span class="stat-num col-b" id="stat-b">0</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const ws = new WebSocket(`ws://${window.location.host}/ws/admin`);
+    const TOTAL_SEATS = 30;
+    const root = document.documentElement;
+
+    ws.onopen = () => console.log("Admin Connected");
+    
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === "admin_update") {
+            updateUI(data);
+        }
+    };
+
+    function setPhase(phase) {
+        ws.send(JSON.stringify({ type: "set_phase", phase: phase }));
+    }
+
+    function changeRound(roundId) {
+        if(confirm("Changing the round will reset current votes. Continue?")) {
+            ws.send(JSON.stringify({ type: "set_round", round_id: roundId }));
+        } else {
+        }
+    }
+
+    function updateUI(data) {
+        // 1. Update Config (Colors/Labels)
+        if(data.round_info) {
+            const r = data.round_info;
+            root.style.setProperty('--party-a-color', r.colors[0]);
+            root.style.setProperty('--party-b-color', r.colors[1]);
+            
+            document.getElementById("label-a").innerText = r.options[0];
+            document.getElementById("label-b").innerText = r.options[1];
+            document.getElementById("round-selector").value = data.round_id;
+        }
+
+        // 2. Update Buttons
+        document.querySelectorAll('.admin-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`btn-${data.phase.toLowerCase()}`).classList.add('active');
+
+        // 3. Update Stats
+        document.getElementById("stat-players").innerText = data.player_count;
+        
+        const opts = data.round_info.options;
+        const valA = data.votes[opts[0]] || 0;
+        const valB = data.votes[opts[1]] || 0;
+        
+        document.getElementById("stat-a").innerText = valA;
+        document.getElementById("stat-b").innerText = valB;
+        document.getElementById("total-votes").innerText = valA + valB;
+
+        // 4. Render Leaderboard
+        const lb = document.getElementById("admin-leaderboard");
+        lb.innerHTML = "";
+        data.players.forEach((p, index) => {
+            const row = document.createElement("div");
+            row.className = "lb-row"; 
+            
+            // Highlight offline players
+            if (!p.online) row.style.opacity = "0.5";
+
+            let borderColor = 'transparent';
+            if (index === 0) borderColor = '#eab308';
+            else if (index === 1) borderColor = '#94a3b8';
+            else if (index === 2) borderColor = '#b45309';
+            row.style.borderLeft = `4px solid ${borderColor}`;
+            
+            row.innerHTML = `
+                <div>
+                    <span style="color:#777; margin-right:8px">#${index+1}</span> ${p.name}
+                    ${!p.online ? '<i class="fa-solid fa-plug-circle-xmark" style="color:red; margin-left:5px"></i>' : ''}
+                </div>
+                <span class="score-val">${p.total_score}%</span>
+            `;
+            lb.appendChild(row);
+        });
+
+        // 5. Render Grid
+        renderAdminGrid(data);
+    }
+
+    function renderAdminGrid(data) {
+        const grid = document.getElementById("admin-grid");
+        grid.innerHTML = "";
+        const seatMap = {};
+        data.players.forEach((p, idx) => { seatMap[p.seat] = { ...p, rank: idx + 1 }; });
+
+        for (let i = 0; i < TOTAL_SEATS; i++) {
+            const s = document.createElement("div");
+            s.className = "seat seat-admin"; 
+            
+            // Layout margins specific to the 6-col grid layout
+            if((i % 6) === 1 || (i % 6) === 3) s.style.marginRight = "20px";
+            if(i >= 6 && i < 12) s.style.marginBottom = "20px";
+            if(i >= 18 && i < 24) s.style.marginBottom = "20px";
+
+            if (seatMap[i]) {
+                s.classList.add("taken");
+                s.innerText = seatMap[i].name.replace("Desk #", "");
+                
+                // Show offline status on seat
+                if(!seatMap[i].online) {
+                    s.style.opacity = "0.4";
+                    s.style.border = "1px solid red";
+                }
+
+                if (data.phase === "RESULTS") {
+                    const rank = seatMap[i].rank;
+                    if (rank <= 3) {
+                        const badge = document.createElement("div");
+                        badge.className = "seat-badge";
+                        badge.style.background = rank === 1 ? '#eab308' : (rank === 2 ? '#94a3b8' : '#b45309');
+                        badge.style.color = 'white';
+                        badge.innerText = rank;
+                        s.appendChild(badge);
+                    }
+                }
+            } else {
+                s.innerText = i + 1;
+            }
+            grid.appendChild(s);
+        }
+        }
+    
+        function resetGame() {
+            if(confirm("Are you sure you want to reset the game server? This will clear all player data and game state.")) {
+                ws.send(JSON.stringify({ type: "reset_game" }));
+                console.log("Sent reset_game command.");
+            }
+        }
+    
+    </script>
+    </body>
+    </html>
