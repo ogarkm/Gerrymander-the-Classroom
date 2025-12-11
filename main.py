@@ -338,6 +338,10 @@ async def get_admin(request: Request):
 async def get_logo(request: Request):
     return FileResponse("static/images/logo.png")
 
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
 @app.websocket("/ws/player")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect_player(websocket)
