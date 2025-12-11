@@ -179,10 +179,13 @@ class GameManager:
             
             # Notify player they were kicked
             if ws:
+                print(f"Attempting to kick player at seat {seat_id}")
                 try:
-                    await ws.send_text(json.dumps({"type": "kicked"}))
+                    await ws.send_text(json.dumps({"type": "kicked_by_admin"}))
+                    print(f"Sent kick message to player at seat {seat_id}")
                     # Optional: Close the socket or let client handle it
-                except: pass
+                except Exception as e:
+                    print(f"Error sending kick message to player at seat {seat_id}: {e}")
             
             del self.seats[seat_id]
             await self.broadcast_seat_map()

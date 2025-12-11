@@ -87,6 +87,11 @@ ws.onmessage = (event) => {
         STATE.takenSeats = msg.taken_seats;
         updateLoginGrid();
     }
+    else if (msg.type === "kicked_by_admin") {
+        console.log("Kicked by admin");
+        alert("You have been kicked from the game by the admin.");
+        window.location.reload();
+    }
     else if (msg.type === "error") {
         alerUser(msg.message);
     }
