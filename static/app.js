@@ -409,8 +409,11 @@ function startTimer() {
 function endGame() {
   clearInterval(STATE.interval);
   
+  // ALLOW NEGATIVE EFFICIENCY
   let diff = STATE.myWins - STATE.origWins;
-  if (diff < 0) diff = 0;
+  // Previously: if (diff < 0) diff = 0; 
+  // Now: We allow 'diff' to be negative to count against the user
+  
   const pct = Math.round((diff / 6) * 100);
   STATE.scorePct = pct;
   
@@ -425,7 +428,10 @@ function endGame() {
 
 function showResults(leaderboard) {
     showScreen("screen-results");
-    document.getElementById("score-percent").innerText = `+${STATE.scorePct}%`;
+    
+    // Format Main Score
+    const mySign = STATE.scorePct > 0 ? "+" : "";
+    document.getElementById("score-percent").innerText = `${mySign}${STATE.scorePct}%`;
     
     const list = document.getElementById("lb-list");
     list.innerHTML = "";
@@ -436,11 +442,15 @@ function showResults(leaderboard) {
             r.className = "lb-row";
             if (b.name === document.getElementById("user-badge").innerText) r.classList.add("me");
             
+            // Format Leaderboard Scores
+            const roundSign = b.round > 0 ? "+" : "";
+            const totalSign = b.score > 0 ? "+" : "";
+            
             r.innerHTML = `
                 <span>${i + 1}. ${b.name}</span>
                 <span>
-                    <span style="font-size:0.8rem; opacity:0.7;">(+${b.round}%)</span> 
-                    +${b.score}%
+                    <span style="font-size:0.8rem; opacity:0.7;">(${roundSign}${b.round}%)</span> 
+                    ${totalSign}${b.score}%
                 </span>`;
             list.appendChild(r);
         }, i * 200);

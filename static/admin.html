@@ -3,337 +3,536 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Command Center</title>
+    <title>Gerrymander Command Center</title>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/styles.css">
     <link rel="icon" type="image/png" href="/logo" />
+    
     <style>
-        /* Modal Styles */
-        .modal {
-            display: none; 
-            position: fixed; 
-            z-index: 1000; 
-            left: 0; top: 0; width: 100%; height: 100%; 
-            background-color: rgba(0,0,0,0.7); 
-            backdrop-filter: blur(5px);
-            justify-content: center; align-items: center;
+        /* --- ADMIN RESET & VARIABLES --- */
+        :root {
+            --bg-app: #121212;
+            --bg-panel: #1e1e1e;
+            --text-main: #e0e0e0;
+            --text-muted: #8d8d8d;
+            --border: rgba(255, 255, 255, 0.1);
+            --primary: #3b82f6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            
+            /* Game Colors */
+            --party-a: #107C10;
+            --party-b: #003791;
         }
-        .modal-content {
-            background-color: var(--container-bg);
-            padding: 30px;
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-app);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden; /* Prevent full page scroll */
+            display: flex; /* Force Flex layout */
+        }
+
+        /* --- LAYOUT CONTAINERS --- */
+        .admin-layout {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            padding: 16px;
+            gap: 16px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            background: var(--bg-panel);
             border-radius: 12px;
-            width: 350px;
-            text-align: center;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            color: var(--text-color);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border);
+            flex-shrink: 0; /* Prevent shrinking */
         }
-        @keyframes popIn {
-            from { transform: scale(0.8); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            min-width: 0; /* Fix flex overflow issues */
         }
-        .close-modal {
-            color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer;
-            margin-top: -15px; margin-right: -10px;
+
+        /* --- COMPONENTS --- */
+        
+        /* Headers */
+        .panel-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            font-weight: 700;
+            font-size: 1.1rem;
+            display: flex; align-items: center; gap: 10px;
+            color: var(--text-main);
         }
-        .close-modal:hover { color: var(--accent-color); }
-        .qr-wrapper { margin: 20px auto; padding: 10px; background: white; border-radius: 8px; width: fit-content; }
-        .share-link {
-            background: var(--neutral-bg); padding: 10px; border-radius: 6px;
-            word-break: break-all; margin-top: 15px; font-family: monospace;
-            border: 1px solid var(--border-color);
+
+        /* Action Bar (Top) */
+        .action-bar {
+            background: var(--bg-panel);
+            padding: 12px 20px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            height: 80px;
+            flex-shrink: 0;
         }
-        .header-btn {
-            background: var(--accent-color); color: white; border: none; padding: 8px 16px; 
-            border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.9rem;
-            display: flex; align-items: center; gap: 8px; transition: 0.2s;
+
+        /* Dashboard Grid */
+        .dash-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 2fr 1fr; /* Map gets 2/3 space */
+            gap: 16px;
+            overflow: hidden; /* Lock scroll to inside panels */
         }
-        .header-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        .card {
+            background: var(--bg-panel);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- THE SMART BUTTON --- */
+        .smart-btn-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #smart-btn {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+            transition: all 0.2s;
+            display: flex; align-items: center; gap: 8px;
+            min-width: 200px;
+            justify-content: center;
+        }
+        #smart-btn:disabled {
+            background: #cbd5e1;
+            box-shadow: none;
+            cursor: not-allowed;
+            color: #64748b;
+        }
+        #smart-btn:active:not(:disabled) { transform: scale(0.98); }
+        #smart-msg { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
+
+        /* --- LEADERBOARD --- */
+        .lb-list { overflow-y: auto; padding: 10px; flex: 1; }
+        .lb-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px; margin-bottom: 6px;
+            background: #2c3e50; border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+        .lb-rank { width: 24px; font-weight: bold; color: var(--text-muted); }
+        .lb-name { flex: 1; font-weight: 600; }
+        .lb-score { font-weight: 800; color: var(--primary); }
+
+        /* --- MAP & SEATS --- */
+        .map-container {
+            flex: 1;
+            background: #1f1f1f;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .classroom-grid {
+            display: grid;
+            grid-template-columns: repeat(6, min-content);
+            gap: 8px;
+            transform: scale(1.1);
+        }
+        .seat {
+            width: 40px; height: 40px;
+            background: #2c3e50;
+            border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 0.8rem;
+            color: #e0e0e0;
+;
+            user-select: none;
+        }
+        /* Spacers for aisles */
+        .seat:nth-child(6n + 2), .seat:nth-child(6n + 4) { margin-right: 15px; }
+        .seat:nth-child(n+7):nth-child(-n+12), .seat:nth-child(n+19):nth-child(-n+24) { margin-bottom: 15px; }
+        
+        /* Seat States */
+        .seat.taken { background: var(--success); color: white; box-shadow: 0 2px 5px rgba(16,185,129,0.3); }
+        .seat.kickable:hover { background: var(--danger); cursor: pointer; content: 'X'; }
+        .seat.waiting { background: #94a3b8; opacity: 0.5; }
+        .seat.voted { background: var(--success); }
+        .seat.offline { border: 2px solid var(--danger); opacity: 0.5; }
+        
+        /* Party Colors override */
+        .seat.taken.party-a { background: var(--party-a) !important; }
+        .seat.taken.party-b { background: var(--party-b) !important; }
+
+        /* --- STATS PANEL --- */
+        .stats-content { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+        .stat-block h4 { margin: 0 0 10px 0; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .bar-chart { display: flex; height: 60px; border-radius: 8px; overflow: hidden; margin-top: 5px; }
+        .bar-part { display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; transition: width 0.3s; }
+
+        /* Utils */
+        .btn-outline { background: white; border: 1px solid var(--border); padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; color: var(--text-muted); }
+        .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-danger { width: 100%; background: #fee2e2; color: #dc2626; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: auto; }
+        
+        /* Modal */
+        .modal { display: none; position: fixed; z-index: 999; left:0; top:0; width:100%; height:100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        .modal-box { background: white; padding: 24px; border-radius: 12px; text-align: center; width: 320px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
     </style>
 </head>
-<body class="admin-view">
+<body>
 
-<!-- SHARE MODAL -->
+<!-- QR MODAL -->
 <div id="shareModal" class="modal">
-    <div class="modal-content">
-        <span class="close-modal" onclick="closeShareModal()">&times;</span>
-        <h2 style="margin-top:0; color:var(--accent-color)">Join the Game</h2>
-        <p>Scan to join:</p>
-        <div class="qr-wrapper">
-            <img id="qr-code-img" src="" alt="QR Code" width="200" height="200">
+    <div class="modal-box" style="background: var(--bg-panel);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0">Join Game</h3>
+            <span onclick="document.getElementById('shareModal').style.display='none'" style="cursor:pointer; font-size:1.5rem">&times;</span>
         </div>
-        <div class="share-link" id="share-link-text"></div>
+        <img id="qr-code-img" src="" style="width:100%; border-radius:8px;">
+        <div id="share-link-text" style="background: var(--bg-panel); padding:8px; margin-top:10px; font-family:monospace; font-size:0.8rem; word-break:break-all; border-radius:4px;"></div>
     </div>
 </div>
 
-<div class="game-container admin-container">
-    <div class="game-header">
-        <div style="display:flex; align-items:center; gap:15px;">
-            <h3><i class="fa-solid fa-gamepad"></i> COMMAND CENTER</h3>
-            <button class="header-btn" onclick="openShareModal()">
-                <i class="fa-solid fa-share-nodes"></i> Share Link
-            </button>
+<div class="admin-layout">
+    
+    <!-- LEFT: SIDEBAR -->
+    <div class="sidebar">
+        <div class="panel-header">
+            <i class="fa-solid fa-trophy" style="color: #f59e0b;"></i> Leaderboard
         </div>
-        <div id="connection-status" style="color: var(--desk-open); font-weight: bold;">
-            <i class="fa-solid fa-wifi"></i> Online
+        <div id="admin-leaderboard" class="lb-list">
+            <!-- Items injected via JS -->
+        </div>
+        <div style="padding:10px; text-align:center; font-size:0.75rem; color:#94a3b8; border-top:1px solid var(--border);">
+            Made by Arkm (aka Aarush)
         </div>
     </div>
 
-    <div class="dashboard-content">
-        <!-- LEADERBOARD CARD -->
-        <div class="dash-card area-leaderboard">
-            <h3>Live Rankings (Cumulative) <i class="fa-solid fa-trophy"></i></h3>
-            <div id="admin-leaderboard"></div>
+    <!-- RIGHT: MAIN -->
+    <div class="main-content">
+        
+        <!-- TOP: ACTION BAR -->
+        <div class="action-bar">
+            <div id="status-indicator" style="font-weight:600; color:var(--success); display:flex; align-items:center; gap:6px;">
+                <i class="fa-solid fa-wifi"></i> Online
+            </div>
+
+            <div class="smart-btn-container">
+                <button id="smart-btn" onclick="triggerNextAction()" disabled>
+                    START GAME
+                </button>
+                <div id="smart-msg">Waiting for players...</div>
+            </div>
+
+            <button class="btn-outline" onclick="openShareModal()">
+                <i class="fa-solid fa-qrcode"></i> Share
+            </button>
         </div>
 
-        <!-- MAP CARD -->
-        <div class="dash-card area-visual">
-            <div class="admin-grid-container">
-                <div id="admin-grid" class="classroom-grid"></div>
+        <!-- CENTER: DASHBOARD GRID -->
+        <div class="dash-grid">
+            
+            <!-- MAP CARD -->
+            <div class="card">
+                <div class="panel-header" style="font-size:0.9rem; justify-content: space-between;">
+                    <span>Classroom Map</span>
+                    <span id="map-legend" style="font-weight:normal; font-size:0.8rem; color:#64748b;">Live Status</span>
+                </div>
+                <div class="map-container">
+                    <div id="admin-grid" class="classroom-grid"></div>
+                </div>
             </div>
-        </div>
 
-        <!-- CONTROLS CARD -->
-        <div class="dash-card area-controls">
-            <div class="controls-wrapper">
-                
-                <!-- Game Config -->
-                <div class="ctrl-group" style="flex: 0 0 250px;">
-                    <h3>Game Configuration</h3>
-                    <select id="round-selector" class="round-select" onchange="changeRound(this.value)">
-                        {% for key, val in rounds.items() %}
-                        <option value="{{key}}">{{val.question}}</option>
-                        {% endfor %}
-                    </select>
-                    
-                    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: auto;">
-                        <div class="stat-box">
-                            <span class="stat-label">PLAYERS</span>
-                            <span class="stat-num" id="stat-players">0</span>
+            <!-- INFO CARD -->
+            <div class="card">
+                <div class="panel-header" style="font-size:0.9rem;">
+                    Round Info <span id="round-idx" style="margin-left:auto; color:var(--primary);">1 / 4</span>
+                </div>
+                <div class="stats-content">
+                    <div class="stat-block">
+                        <h4>Current Question</h4>
+                        <div id="question-text" style="font-weight:600; font-size:1.1rem;">Loading...</div>
+                    </div>
+
+                    <div class="stat-block">
+                        <h4>Live Polling</h4>
+                        <div class="bar-chart">
+                            <div id="bar-a" class="bar-part" style="width:50%; background:var(--party-a);">A</div>
+                            <div id="bar-b" class="bar-part" style="width:50%; background:var(--party-b);">B</div>
                         </div>
-                        <div class="stat-box">
-                            <span class="stat-label">TOTAL VOTES</span>
-                            <span class="stat-num" id="total-votes">0</span>
+                        <div style="display:flex; justify-content:space-between; margin-top:5px; font-size:0.85rem;">
+                            <span id="label-a">Option A</span>
+                            <span id="label-b">Option B</span>
                         </div>
                     </div>
-                </div>
 
-                <!-- Phase Buttons -->
-                <div class="ctrl-group">
-                    <h3>Phase Control</h3>
-                    <div class="btn-grid">
-                        <button class="admin-btn" id="btn-login" onclick="setPhase('LOGIN')">
-                            <i class="fa-solid fa-door-open fa-lg"></i> LOGIN
-                        </button>
-                        <button class="admin-btn" id="btn-vote" onclick="setPhase('VOTE')">
-                            <i class="fa-solid fa-check-to-slot fa-lg"></i> VOTE
-                        </button>
-                        <button class="admin-btn" id="btn-game" onclick="setPhase('GAME')">
-                            <i class="fa-solid fa-chess-board fa-lg"></i> GAME
-                        </button>
-                        <button class="admin-btn" id="btn-results" onclick="setPhase('RESULTS')">
-                            <i class="fa-solid fa-chart-simple fa-lg"></i> RESULTS
-                        </button>
+                    <div class="stat-block">
+                        <h4>Session Stats</h4>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>Players Connected:</span>
+                            <strong id="count-players">0</strong>
+                        </div>
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>Votes Cast:</span>
+                            <strong id="count-votes">0</strong>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Reset Button -->
-                <div class="ctrl-group" style="flex: 0 0 100px;">
-                    <h3>System</h3>
-                    <div class="btn-grid" style="grid-template-columns: 1fr;">
-                        <button class="admin-btn" id="btn-reset" onclick="resetGame()" style="background: rgba(231, 76, 60, 0.1); border-color: var(--desk-taken);">
-                            <i class="fa-solid fa-power-off fa-lg" style="color: var(--desk-taken)"></i> <span style="color:var(--desk-taken)">RESET</span>
-                        </button>
-                    </div>
+                    <button class="btn-danger" onclick="resetGame()">
+                        <i class="fa-solid fa-power-off"></i> RESET SERVER
+                    </button>
                 </div>
-
-                <!-- Live Votes -->
-                <div class="ctrl-group" style="flex: 0 0 220px;">
-                    <h3>Live Polling</h3>
-                    <div class="stat-box" style="border-left: 4px solid var(--party-a-color); margin-bottom: 10px;">
-                        <span class="stat-label" id="label-a">Option A</span>
-                        <span class="stat-num col-a" id="stat-a">0</span>
-                    </div>
-                    <div class="stat-box" style="border-left: 4px solid var(--party-b-color);">
-                        <span class="stat-label" id="label-b">Option B</span>
-                        <span class="stat-num col-b" id="stat-b">0</span>
-                    </div>
-                </div>
-
             </div>
+
         </div>
     </div>
 </div>
 
 <script>
-    // SECURE PROTOCOL HANDLING
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`${protocol}//${window.location.host}/ws/admin`);
-    
-    const TOTAL_SEATS = 30;
     const root = document.documentElement;
+    
+    let currentState = null;
+    let autoNextTimer = null;
 
     ws.onopen = () => {
-        console.log("Admin Connected");
-        document.getElementById("connection-status").innerHTML = '<i class="fa-solid fa-wifi"></i> Online';
-        document.getElementById("connection-status").style.color = 'var(--desk-open)';
+        document.getElementById("status-indicator").innerHTML = '<i class="fa-solid fa-wifi"></i> Online';
+        document.getElementById("status-indicator").style.color = 'var(--success)';
     };
-
     ws.onclose = () => {
-        document.getElementById("connection-status").innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Offline';
-        document.getElementById("connection-status").style.color = 'var(--desk-taken)';
+        document.getElementById("status-indicator").innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Offline';
+        document.getElementById("status-indicator").style.color = 'var(--danger)';
     };
-    
-    ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === "admin_update") {
+    ws.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        if(data.type === "admin_update") {
+            currentState = data;
             updateUI(data);
         }
     };
 
-    function setPhase(phase) {
-        ws.send(JSON.stringify({ type: "set_phase", phase: phase }));
+    function triggerNextAction() {
+        if(!currentState) return;
+        document.getElementById("smart-btn").disabled = true;
+        ws.send(JSON.stringify({ type: "action_next" }));
     }
 
-    function changeRound(roundId) {
-        if(confirm("Changing the round will reset current votes. Continue?")) {
-            ws.send(JSON.stringify({ type: "set_round", round_id: roundId }));
+    function kickPlayer(seatId) {
+        if(confirm(`Kick player at Desk ${seatId+1}?`)) {
+            ws.send(JSON.stringify({ type: "kick_player", seat_id: seatId }));
         }
     }
 
     function resetGame() {
-        if(confirm("⚠ DANGER: This will KICK ALL PLAYERS and RESET scores. Continue?")) {
+        if(confirm("FULL RESET: Kick all players and zero scores?")) {
             ws.send(JSON.stringify({ type: "reset_game" }));
         }
     }
 
-    // --- SHARE FUNCTIONALITY ---
-    function openShareModal() {
-        const modal = document.getElementById("shareModal");
-        const linkText = document.getElementById("share-link-text");
-        const img = document.getElementById("qr-code-img");
-        
-        // Use the origin (protocol + host)
-        const joinLink = window.location.origin;
-        
-        linkText.innerText = joinLink;
-        
-        // Use QR Server API
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(joinLink)}`;
-        img.src = qrUrl;
-        
-        modal.style.display = "flex";
-    }
-
-    function closeShareModal() {
-        document.getElementById("shareModal").style.display = "none";
-    }
-
-    // Close modal on outside click
-    window.onclick = function(event) {
-        if (event.target == document.getElementById("shareModal")) {
-            closeShareModal();
-        }
-    }
-
     function updateUI(data) {
-        // 1. Update Config (Colors/Labels)
-        if(data.round_info) {
-            const r = data.round_info;
-            root.style.setProperty('--party-a-color', r.colors[0]);
-            root.style.setProperty('--party-b-color', r.colors[1]);
-            
-            document.getElementById("label-a").innerText = r.options[0];
-            document.getElementById("label-b").innerText = r.options[1];
-            document.getElementById("round-selector").value = data.round_id;
-        }
-
-        // 2. Update Buttons
-        document.querySelectorAll('.admin-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(`btn-${data.phase.toLowerCase()}`).classList.add('active');
-
-        // 3. Update Stats
-        document.getElementById("stat-players").innerText = data.player_count;
+        const r = data.round_info;
         
-        const opts = data.round_info.options;
-        const valA = data.votes[opts[0]] || 0;
-        const valB = data.votes[opts[1]] || 0;
+        // 1. Theme Colors
+        root.style.setProperty('--party-a', r.colors[0]);
+        root.style.setProperty('--party-b', r.colors[1]);
+
+        // 2. Round Info
+        document.getElementById("round-idx").innerText = `${data.round_index + 1} / ${data.total_rounds}`;
+        document.getElementById("question-text").innerText = r.question;
+        document.getElementById("label-a").innerText = r.options[0];
+        document.getElementById("label-b").innerText = r.options[1];
+
+        // 3. Stats Bars
+        const valA = data.votes[r.options[0]] || 0;
+        const valB = data.votes[r.options[1]] || 0;
+        const totalV = valA + valB;
         
-        document.getElementById("stat-a").innerText = valA;
-        document.getElementById("stat-b").innerText = valB;
-        document.getElementById("total-votes").innerText = valA + valB;
+        // Prevent div by zero for bar widths
+        const pctA = totalV > 0 ? (valA / totalV) * 100 : 50;
+        const pctB = totalV > 0 ? (valB / totalV) * 100 : 50;
+        
+        const barA = document.getElementById("bar-a");
+        const barB = document.getElementById("bar-b");
+        
+        barA.style.width = pctA + "%"; barA.innerText = valA;
+        barB.style.width = pctB + "%"; barB.innerText = valB;
+        
+        // Label visibility for empty bars
+        barA.style.opacity = valA > 0 || totalV === 0 ? 1 : 0.3;
+        barB.style.opacity = valB > 0 || totalV === 0 ? 1 : 0.3;
 
-        // 4. Render Leaderboard
-        const lb = document.getElementById("admin-leaderboard");
-        lb.innerHTML = "";
-        data.players.forEach((p, index) => {
-            const row = document.createElement("div");
-            row.className = "lb-row"; 
-            
-            if (!p.online) row.style.opacity = "0.5";
+        document.getElementById("count-players").innerText = data.player_count;
+        document.getElementById("count-votes").innerText = totalV;
 
-            let borderColor = 'transparent';
-            if (index === 0) borderColor = '#eab308';
-            else if (index === 1) borderColor = '#94a3b8';
-            else if (index === 2) borderColor = '#b45309';
-            row.style.borderLeft = `4px solid ${borderColor}`;
-            
-            row.innerHTML = `
-                <div>
-                    <span style="color:#777; margin-right:8px">#${index+1}</span> ${p.name}
-                    ${!p.online ? '<i class="fa-solid fa-plug-circle-xmark" style="color:red; margin-left:5px"></i>' : ''}
-                </div>
-                <span class="score-val">${p.total_score}%</span>
-            `;
-            lb.appendChild(row);
-        });
-
-        // 5. Render Grid
-        renderAdminGrid(data);
+        // 4. Grid & Smart Button
+        renderGrid(data);
+        renderLeaderboard(data);
+        updateSmartButton(data);
     }
 
-    function renderAdminGrid(data) {
+    function renderGrid(data) {
         const grid = document.getElementById("admin-grid");
         grid.innerHTML = "";
+        
         const seatMap = {};
-        data.players.forEach((p, idx) => { seatMap[p.seat] = { ...p, rank: idx + 1 }; });
+        data.players.forEach(p => seatMap[p.seat] = p);
 
-        for (let i = 0; i < TOTAL_SEATS; i++) {
+        for (let i = 0; i < 30; i++) {
             const s = document.createElement("div");
-            s.className = "seat seat-admin"; 
+            s.className = "seat";
             
-            if((i % 6) === 1 || (i % 6) === 3) s.style.marginRight = "20px";
-            if(i >= 6 && i < 12) s.style.marginBottom = "20px";
-            if(i >= 18 && i < 24) s.style.marginBottom = "20px";
-
-            if (seatMap[i]) {
+            if(seatMap[i]) {
+                const p = seatMap[i];
+                s.innerText = p.name.replace("Desk #", "");
                 s.classList.add("taken");
-                s.innerText = seatMap[i].name.replace("Desk #", "");
                 
-                if(!seatMap[i].online) {
-                    s.style.opacity = "0.4";
-                    s.style.border = "1px solid red";
+                if(data.phase === "LOGIN") {
+                    s.classList.add("kickable");
+                    s.onclick = () => kickPlayer(i);
+                } else if(data.phase === "VOTE") {
+                    if(p.has_voted) s.classList.add("voted");
+                    else s.classList.add("waiting");
                 }
-
-                if (data.phase === "RESULTS") {
-                    const rank = seatMap[i].rank;
-                    if (rank <= 3) {
-                        const badge = document.createElement("div");
-                        badge.className = "seat-badge";
-                        badge.style.background = rank === 1 ? '#eab308' : (rank === 2 ? '#94a3b8' : '#b45309');
-                        badge.style.color = 'white';
-                        badge.innerText = rank;
-                        s.appendChild(badge);
-                    }
-                }
+                
+                if(!p.online) s.classList.add("offline");
+                
+                // Color override if vote is known (optional, usually secret ballot until end)
+                // But for game visuals, maybe we show party colors in results?
+                // Keeping generic green/gray for now unless result phase
             } else {
                 s.innerText = i + 1;
             }
             grid.appendChild(s);
         }
     }
+
+    function updateSmartButton(data) {
+        const btn = document.getElementById("smart-btn");
+        const msg = document.getElementById("smart-msg");
+        
+        if (data.phase !== "RESULTS" && autoNextTimer) {
+            clearTimeout(autoNextTimer); autoNextTimer = null;
+        }
+
+        btn.style.background = ""; // Reset gradient
+
+        if (data.phase === "LOGIN") {
+            btn.innerText = "START GAME";
+            btn.disabled = data.player_count === 0;
+            msg.innerText = data.player_count > 0 ? "Ready to begin" : "Waiting for players...";
+        } 
+        else if (data.phase === "VOTE") {
+            btn.innerHTML = 'STOP VOTING <i class="fa-solid fa-gavel"></i>';
+            btn.disabled = !data.can_progress;
+            if(data.can_progress) {
+                btn.style.background = "var(--success)";
+                msg.innerText = "Votes sufficient to proceed";
+            } else {
+                msg.innerText = "Waiting for votes...";
+            }
+        }
+        else if (data.phase === "GAME") {
+            btn.innerHTML = 'END ROUND <i class="fa-solid fa-stopwatch"></i>';
+            btn.disabled = false;
+            btn.style.background = "var(--danger)";
+            msg.innerText = "Redistricting in progress";
+        }
+        else if (data.phase === "RESULTS") {
+            if(data.round_index >= data.total_rounds - 1) {
+                btn.innerText = "GAME OVER";
+                btn.disabled = true;
+                btn.style.background = "#1e293b";
+                msg.innerText = "Final Scores Displayed";
+            } else {
+                if(!autoNextTimer) {
+                    let t = 5;
+                    btn.disabled = true;
+                    const tick = () => {
+                        btn.innerText = `NEXT ROUND (${t})`;
+                        msg.innerText = "Auto-advancing...";
+                        if(t <= 0) triggerNextAction();
+                        else { t--; autoNextTimer = setTimeout(tick, 1000); }
+                    };
+                    tick();
+                }
+            }
+        }
+    }
+
+    function renderLeaderboard(data) {
+        const lb = document.getElementById("admin-leaderboard");
+        lb.innerHTML = "";
+        data.players.forEach((p, idx) => {
+            const row = document.createElement("div");
+            row.className = "lb-row";
+            row.innerHTML = `
+                <div class="lb-rank">${idx+1}</div>
+                <div class="lb-name">
+                    ${p.name}
+                    ${!p.online ? '<i class="fa-solid fa-plug" style="color:red; font-size:0.8em"></i>' : ''}
+                </div>
+                <div class="lb-score">${p.total_score}</div>
+            `;
+            lb.appendChild(row);
+        });
+    }
+
+    function openShareModal() {
+        const modal = document.getElementById("shareModal");
+        const link = window.location.origin;
+        document.getElementById("share-link-text").innerText = link;
+        document.getElementById("qr-code-img").src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&bgcolor=1e1e1e&color=e0e0e0&data=${encodeURIComponent(link)}`;
+        modal.style.display = "flex";
+    }
+    
+    // Close modal on click outside
+    window.onclick = (e) => {
+        if(e.target == document.getElementById("shareModal")) {
+            document.getElementById("shareModal").style.display = "none";
+        }
+    }
 </script>
+
 </body>
 </html>
